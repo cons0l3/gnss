@@ -1,0 +1,41 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    init: true
+    command: sleep infinity
+    volumes:
+      - ..:/workspaces/gnss:cached
+    environment:
+      NODE_ENV: development
+      POSTGRES_URL: postgresql://postgres:postgres@postgres:5432/gnss
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: gnss
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgis/postgis:16-3.5-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gnss
+    ports:
+      - "5432:5432"
+    volumes:
+      - gnss-postgres-data:/var/lib/postgresql/data
+      - ../docs/create_tables.sql:/docker-entrypoint-initdb.d/01-create_tables.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gnss"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  gnss-postgres-data:

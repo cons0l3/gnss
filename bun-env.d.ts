@@ -15,3 +15,41 @@ declare module "*.module.css" {
   const classes: { readonly [key: string]: string };
   export = classes;
 }
+
+declare module "@mantine/core/styles.css";
+
+interface Navigator {
+  bluetooth?: Bluetooth;
+}
+
+interface Bluetooth {
+  requestDevice(options: RequestDeviceOptions): Promise<BluetoothDevice>;
+}
+
+interface BluetoothDevice {
+  gatt: BluetoothRemoteGATTServer;
+  addEventListener(type: "gattserverdisconnected", listener: () => void): void;
+}
+
+interface BluetoothRemoteGATTServer {
+  connected: boolean;
+  connect(): Promise<BluetoothRemoteGATTServer>;
+  getPrimaryService(service: string): Promise<BluetoothRemoteGATTService>;
+  disconnect(): void;
+}
+
+interface BluetoothRemoteGATTService {
+  getCharacteristic(characteristic: string): Promise<BluetoothRemoteGATTCharacteristic>;
+}
+
+interface BluetoothRemoteGATTCharacteristic {
+  value: DataView | null;
+  addEventListener(type: "characteristicvaluechanged", listener: (event: Event) => void): void;
+  startNotifications(): Promise<void>;
+  writeValue(value: BufferSource): Promise<void>;
+}
+
+interface RequestDeviceOptions {
+  acceptAllDevices?: boolean;
+  optionalServices?: string[];
+}

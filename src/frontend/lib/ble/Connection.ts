@@ -29,6 +29,10 @@ const bleMessageQueueAtom = atom<Uint8Array<ArrayBuffer>[]>([]);
 
 export const connectBleAtom = atom(null, async (get, set) => {
   try {
+    if (!navigator.bluetooth) {
+      throw new Error("Web Bluetooth is not available in this browser.");
+    }
+
     const device = await navigator.bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: [NUS_SERVICE_UUID]
@@ -56,8 +60,9 @@ export const connectBleAtom = atom(null, async (get, set) => {
 
     // Handle incoming notifications
     await txChar.startNotifications();
-    txChar.addEventListener("characteristicvaluechanged", event => {
-      const value = new TextDecoder().decode(event.target.value);
+    txChar.addEventListener("characteristicvaluechanged", (event: Event) => {
+      const target = event.target as unknown as BluetoothRemoteGATTCharacteristic;
+      const value = new TextDecoder().decode(target.value ?? new Uint8Array());
       set(lastMessageAtom, value);
     });
 
@@ -92,6 +97,9 @@ export const sendBleMessageAtom = atom(null, async (get, set, message: Uint8Arra
     await rxChar.writeValue(message);
     while (get(bleMessageQueueAtom).length > 0) {
       const nextMessage = get(bleMessageQueueAtom)[0];
+      if (!nextMessage) {
+        break;
+      }
       set(bleMessageQueueAtom, get(bleMessageQueueAtom).slice(1));
       await rxChar.writeValue(nextMessage);
     }

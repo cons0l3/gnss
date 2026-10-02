@@ -33,7 +33,8 @@ export class NTRIPWebSocketHandler implements WebSocketHandler<string> {
         ws: Bun.ServerWebSocket<string>,
         message: string | Buffer<ArrayBuffer>,
     ): void | Promise<void> => {
-        const position = JSON.parse(message) as { lat: number; lon: number };
+        const raw = typeof message === "string" ? message : Buffer.from(message).toString();
+        const position = JSON.parse(raw) as { lat: number; lon: number };
 
         const xyz = llhToEcef(position.lat, position.lon)
 
@@ -57,7 +58,7 @@ export class NTRIPWebSocketHandler implements WebSocketHandler<string> {
                 console.log("ntrip: client close");
             });
 
-            this.ntripClient.on("error", (err) => {
+            this.ntripClient.on("error", (err: unknown) => {
                 console.log("ntrip: error: " + err);
             });
 

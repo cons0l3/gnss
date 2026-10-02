@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+
 CREATE TABLE
   public.survey_points (
     id serial NOT NULL,
@@ -10,7 +12,7 @@ CREATE TABLE
 ALTER TABLE
   public.survey_points
 ADD
-  CONSTRAINT survey_points_pkey PRIMARY KEY (id)
+  CONSTRAINT survey_points_pkey PRIMARY KEY (id);
 
 CREATE TABLE
   public.survey_lines (
@@ -24,8 +26,7 @@ CREATE TABLE
 ALTER TABLE
   public.survey_lines
 ADD
-  CONSTRAINT survey_lines_pkey PRIMARY KEY (id)
-
+  CONSTRAINT survey_lines_pkey PRIMARY KEY (id);
 
 CREATE TABLE
   public.survey_polygons (
@@ -39,4 +40,4 @@ CREATE TABLE
 ALTER TABLE
   public.survey_polygons
 ADD
-  CONSTRAINT survey_polygons_pkey PRIMARY KEY (id)
+  CONSTRAINT survey_polygons_pkey PRIMARY KEY (id);

@@ -1,4 +1,4 @@
-export function Row({ children: React.ReactNode }) {
+export function Row({ children }: { children: React.ReactNode }) {
     return <div>
         {children}
     </div>

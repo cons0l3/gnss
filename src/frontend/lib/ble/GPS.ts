@@ -14,31 +14,32 @@ export type GGA = {
 }
 
 // Derive GGA from latest BLE message
-export const currentGGAAtom = atom<GGA | null>((get) => {
+export const currentGGAAtom = atom((get) => {
     const lastMessage = get(lastMessageAtom);
     if (!lastMessage) return null;
 
     const parts = lastMessage.split(",");
     if (parts[0] !== "$GNGGA") return null; // Not a GGA message
 
-    if (parts.length < 10) {
+    if (parts.length < 12 || !parts[1] || !parts[2] || !parts[3] || !parts[4] || !parts[5] || !parts[6] || !parts[7] || !parts[8] || !parts[9] || !parts[11]) {
         console.warn("Received GGA message with insufficient parts:", lastMessage);
         return null;
     }
 
     try {
+        const fixQuality = Number.parseInt(parts[6], 10);
+
         return {
             time: parts[1],
             latitude: nmeaToDecimal(parts[2], parts[3]),
             longitude: nmeaToDecimal(parts[4], parts[5]),
-            fixQuality: parseInt(parts[6]),
-            fixQualityName: fixQualityToName(parseInt(parts[6])),
-            numSatellites: parseInt(parts[7]),
-            horizontalDilution: parseFloat(parts[8]),
-            altitude: parseFloat(parts[9]),
-            heightOfGeoid: parseFloat(parts[11])
-
-        };
+            fixQuality,
+            fixQualityName: fixQualityToName(fixQuality),
+            numSatellites: Number.parseInt(parts[7], 10),
+            horizontalDilution: Number.parseFloat(parts[8]),
+            altitude: Number.parseFloat(parts[9]),
+            heightOfGeoid: Number.parseFloat(parts[11])
+        } satisfies GGA;
     } catch (error) {
         console.error("Failed to parse GGA message", error);
         return null;

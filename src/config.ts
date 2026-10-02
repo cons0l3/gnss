@@ -12,6 +12,14 @@ export const NTRIPConfig: NTRIPConfigType = {
     mountpoint: "VRS_3_4G_NI",
     username: "XYZ",
     password: "ABC",
-}
+};
 
-export const PostgresConnectionString = "postgresql://ABC:DEF@1.2.3.4:5432/postgis"
+const pgHost = process.env.PGHOST ?? "postgres";
+const pgPort = process.env.PGPORT ?? "5432";
+const pgUser = process.env.PGUSER ?? "postgres";
+const pgPassword = process.env.PGPASSWORD ?? "postgres";
+const pgDatabase = process.env.PGDATABASE ?? "gnss";
+
+export const PostgresConnectionString =
+    process.env.POSTGRES_URL ??
+    `postgresql://${pgUser}:${pgPassword}@${pgHost}:${pgPort}/${pgDatabase}`;

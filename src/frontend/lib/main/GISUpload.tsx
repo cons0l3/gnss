@@ -7,7 +7,7 @@ import axios from "axios";
 import type { UploadPayload } from "../../../server/uploadHandler";
 import useLocalStorageState from "use-local-storage-state";
 import { Button, Flex, Select, TextInput, Grid } from "@mantine/core";
-import { Status } from "../status/Status";
+import { Color, Status } from "../status/Status";
 
 enum DataType {
     POINTS = 'points',
@@ -78,7 +78,7 @@ export function GisUpload() {
                 <Button onClick={clear} size="xs" disabled={positions.length === 0} variant="outline" color="red">
                     Clear
                 </Button>
-                <Status text={status} color={status === "success" ? "green" : status === "error" ? "red" : "blue"}></Status>
+                <Status text={status} color={status === "success" ? Color.GREEN : status === "error" ? Color.RED : Color.YELLOW}></Status>
             </Flex>
             <Flex>
                 <Grid>

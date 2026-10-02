@@ -11,7 +11,7 @@ const server = serve({
 
   fetch(req, server) {
     // upgrade the request to a WebSocket
-    if (server.upgrade(req)) {
+    if (server.upgrade(req, { data: "websocket" })) {
       return; // do not return a Response
     }
     return new Response("Upgrade failed", { status: 500 });
