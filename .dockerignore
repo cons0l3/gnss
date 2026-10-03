@@ -1,0 +1,14 @@
+.git
+node_modules
+dist
+coverage
+.devcontainer
+.github
+.devin
+.codegraph
+docs
+esp32
+parts
+*.log
+.env
+.env.*

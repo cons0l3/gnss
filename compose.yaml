@@ -1,0 +1,46 @@
+services:
+  app:
+    build: .
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      POSTGRES_URL: postgresql://postgres:postgres@postgres:5432/gnss
+      NTRIP_HOST: ${NTRIP_HOST:-}
+      NTRIP_PORT: ${NTRIP_PORT:-}
+      NTRIP_MOUNTPOINT: ${NTRIP_MOUNTPOINT:-}
+      NTRIP_USERNAME: ${NTRIP_USERNAME:-}
+      NTRIP_PASSWORD: ${NTRIP_PASSWORD:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"fetch('https://localhost:' + (process.env.PORT || 3000), { tls: { rejectUnauthorized: false } }).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  postgres:
+    image: postgis/postgis:16-3.5-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: gnss
+    volumes:
+      - gnss-postgres-data:/var/lib/postgresql/data
+      - ./docs/create_tables.sql:/docker-entrypoint-initdb.d/01-create_tables.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d gnss"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  gnss-postgres-data:
