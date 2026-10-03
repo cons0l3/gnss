@@ -2,6 +2,7 @@ import { serve } from "bun";
 import frontend from "./frontend/index.html";
 import { NTRIPWebSocketHandler } from "./server/ws";
 import { uploadHandler } from "./server/uploadHandler";
+import { handleFetch } from "./server/http";
 
 const server = serve({
   routes: {
@@ -9,13 +10,7 @@ const server = serve({
     "/upload": uploadHandler
   },
 
-  fetch(req, server) {
-    // upgrade the request to a WebSocket
-    if (server.upgrade(req, { data: "websocket" })) {
-      return; // do not return a Response
-    }
-    return new Response("Upgrade failed", { status: 500 });
-  },
+  fetch: handleFetch,
 
   websocket: new NTRIPWebSocketHandler(),
 
