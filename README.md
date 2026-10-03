@@ -18,18 +18,18 @@ flowchart LR
     GNSS["GNSS receiver\nNMEA out / RTCM in"]
     DB["PostGIS\nsurvey_* tables"]
 
-    NTRIP -->|RTCM corrections (uplink)| SERVER
-    SERVER -->|RTCM bytes / base64| BROWSER
-    BROWSER -->|BLE NUS write| ESP32
-    ESP32 -->|UART 115200| GNSS
-    GNSS -->|NMEA $GNGGA| ESP32
-    ESP32 -->|BLE notify| BROWSER
-    BROWSER -->|parse / display / stage| UI
-    UI -->|position + staging| SERVER
-    SERVER -->|WKT inserts| DB
+    NTRIP -->|"RTCM corrections (uplink)"| SERVER
+    SERVER -->|"RTCM bytes / base64"| BROWSER
+    BROWSER -->|"BLE NUS write"| ESP32
+    ESP32 -->|"UART 115200"| GNSS
+    GNSS -->|"NMEA $GNGGA"| ESP32
+    ESP32 -->|"BLE notify"| BROWSER
+    BROWSER -->|"parse / display / stage"| UI
+    UI -->|"position + staging"| SERVER
+    SERVER -->|"WKT inserts"| DB
 
-    BROWSER <-->|WebSocket| SERVER
-    GNSS <-->|RTCM input| ESP32
+    BROWSER <-->|"WebSocket"| SERVER
+    GNSS <-->|"RTCM input"| ESP32
 ```
 
 ### Correction data path (downlink)
@@ -169,3 +169,92 @@ bun start   # production server
    starts the NTRIP stream — watch the fix quality progress to **RTK Fixed**.
 4. Use **Stage Position** (or Manual Position) to capture points, then
    **Append Staged Position**, pick a geometry type/name, and **Upload**.
+
+## Printable broomstick bubble-level mount
+
+A two-piece clamp for a **27.5 mm diameter stick**, with a horizontal tray for
+a **65.6 mm diameter × 10.5 mm high circular bubble level**. The seating plane
+is perpendicular to the stick axis: the bubble indicates verticality when the
+stick is upright. The level sits beside the stick, not on its end.
+
+### Files
+
+- [Holder and tray STL](parts/broomstick_level_holder.stl) — print one.
+- [Removable clamp cap STL](parts/broomstick_level_clamp_cap.stl) — print one.
+- [Assembly illustration](parts/broomstick_level_mount.png) — stick and level
+  shown for context; bolts omitted.
+- [Editable CAD generator](parts/broomstick_level_mount.py) — dimensions in
+  millimetres at the top. Regenerate with
+  `uv run parts/broomstick_level_mount.py`; this is a Python CAD tool, independent
+  of the Bun application, with its own pinned dependencies.
+
+The clamp is 48 mm tall with a 27.9 mm bore and a 1 mm split gap before tightening.
+The level pocket is 66.2 mm across, with a 3 mm floor and 7 mm retaining wall.
+The level protrudes 3.5 mm above the wall. The level centre is 66 mm from the
+stick axis. Holder bounds are approximately 130.1 × 72.2 × 48 mm; the cap is
+56 × 17.5 × 48 mm.
+
+### PrusaSlicer setup
+
+Assuming an Original Prusa **i3 MK3S/MK3S+** with a standard 0.4 mm nozzle:
+
+1. Select your actual printer and filament profiles.
+2. Import both STLs as **separate objects**, at **100% scale in millimetres**.
+   They are separate mechanical parts, not one multi-material object.
+3. Keep the supplied orientation: tray opening upward, clamp axis vertical,
+   and both flat bottoms on the bed. The cap also prints standing upright.
+4. Use **0.20 mm layers**, **5 perimeters**, **5 top/bottom solid layers**, and
+   **30% gyroid infill**. PETG is recommended for outdoor use; PLA is suitable
+   for an initial fit check but can soften in a hot car.
+5. Start with supports **off**. The bolt holes have 45-degree teardrop roofs;
+   the tray and reinforcing gusset build from below. A **5 mm outer brim**
+   helps the narrow cap stay attached to the bed.
+6. Arrange the parts with space between their brims, slice, and inspect the
+   layer preview for continuous walls and unobstructed bolt holes.
+
+Use the filament profile's temperatures; no machine-specific G-code is supplied.
+Do not scale the model to adjust fit, because that also changes the bolt holes
+and level pocket. Change the diameter/clearance parameters instead.
+
+### Hardware and assembly
+
+- **4 × M4 × 25 mm** socket-head bolts.
+- **4 × M4 nuts**, preferably nyloc.
+- **8 × M4 flat washers**, one under each head and nut.
+- A little neutral-cure silicone compatible with the level housing.
+
+1. Remove brim and any first-layer burrs. Clean the tray floor; check that the
+   level rests flat without rocking. It should drop into the pocket without
+   force. Do not compress or distort the liquid-filled housing.
+2. Put the holder and cap around a straight, round portion of the stick.
+   Insert the four bolts with washers and nuts on the outer ear faces.
+3. Tighten progressively in a diagonal sequence until the mount cannot slide
+   or rotate. Leave a visible split gap; do not force the halves together or
+   crush the wood. If the halves bottom out before gripping, the actual stick
+   diameter requires a smaller bore in the generator.
+4. Check calibration before securing the level. Hold the stick vertical using
+   an independent plumb line, viewed from two directions 90 degrees apart.
+   The bubble should centre. If needed, use a thin permanent shim under the
+   appropriate edge of the level; do not assume the printed seat is calibrated.
+5. While keeping the stick independently vertical, rotate the loose level
+   180 degrees in its seat and check again. A changed reading indicates an
+   issue with the level's own reference. Settle that before fixing it in place.
+6. Retain the level with three small silicone dabs between its side and the
+   pocket wall. Keep silicone off the reference floor; let it cure, then repeat
+   the calibration check. Until retained, the level can fall out if tipped.
+
+A centred bubble is only as accurate as the level's sensitivity, calibration,
+the printed mount, and the stick's straightness. This is not a guarantee of
+perfect verticality or surveying accuracy. Recheck after impact, heat exposure,
+or moving the clamp to another portion of the stick.
+
+### Verification
+
+The generator was run and both exported STLs were reloaded: each is watertight,
+consistently wound, and a single connected solid. Solid-geometry checks cover
+the nominal stick and level fits, four M4 shaft paths, the continuous flat
+seating floor, separation of the two clamp parts, and clearance while taking up
+the clamp's diametral allowance. Both fit inside the MK3S build volume.
+The assembly illustration was inspected. These are digital geometry checks:
+the parts have **not been physically printed or fit-tested**, and PrusaSlicer
+was not available for a slicing check.
