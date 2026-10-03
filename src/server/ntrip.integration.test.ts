@@ -1,9 +1,10 @@
 import { describe, test, expect } from "bun:test";
 import { NTRIPWebSocketHandler } from "./ws";
 import { NTRIPConfig } from "../config";
-import { MockNtripCaster, rtcmFrame } from "./testing/mockNtripCaster";
+import { MockNtripCaster, rtcmFrame, crc24q } from "../../mock-caster/caster";
 
 const { NtripClient } = require("ntrip-client");
+const { crc24, checkRtcmCrc24 } = require("ntrip-decoder/lib/crc24");
 
 async function waitFor(cond: () => boolean, what: string, timeoutMs = 5000) {
     const start = Date.now();
@@ -34,6 +35,21 @@ function nmeaToDegrees(field: string): number {
     const v = Number(field);
     return Math.floor(v / 100) + (v % 100) / 60;
 }
+
+describe("mock caster RTCM framing", () => {
+    test("crc24q matches ntrip-decoder's table implementation", () => {
+        for (const size of [1, 3, 64, 300]) {
+            const data = Buffer.alloc(size);
+            for (let i = 0; i < size; i++) data[i] = (i * 37 + 11) & 0xff;
+            expect(crc24q(data)).toBe(crc24(data));
+        }
+    });
+
+    test("rtcmFrame output passes the decoder's CRC-24Q check", () => {
+        expect(checkRtcmCrc24(rtcmFrame(Buffer.from([1, 2, 3])))).toBe(true);
+        expect(checkRtcmCrc24(rtcmFrame(Buffer.alloc(200)))).toBe(true);
+    });
+});
 
 describe("NTRIP caster integration (mock SAPOS stream)", () => {
     test("handshakes with mountpoint and credentials, then streams RTCM to the websocket", async () => {

@@ -11,20 +11,38 @@ services:
     environment:
       NODE_ENV: production
       POSTGRES_URL: postgresql://postgres:postgres@postgres:5432/gnss
-      NTRIP_HOST: ${NTRIP_HOST:-}
-      NTRIP_PORT: ${NTRIP_PORT:-}
-      NTRIP_MOUNTPOINT: ${NTRIP_MOUNTPOINT:-}
+      # Until real SAPOS credentials are available, the app talks to the
+      # ntrip-mock container. Set NTRIP_HOST/NTRIP_PORT/NTRIP_MOUNTPOINT/
+      # NTRIP_USERNAME/NTRIP_PASSWORD (env or .env) to use the real caster.
+      NTRIP_HOST: ${NTRIP_HOST:-ntrip-mock}
+      NTRIP_PORT: ${NTRIP_PORT:-2101}
+      NTRIP_MOUNTPOINT: ${NTRIP_MOUNTPOINT:-VRS_3_4G_NI}
       NTRIP_USERNAME: ${NTRIP_USERNAME:-}
       NTRIP_PASSWORD: ${NTRIP_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy
+      ntrip-mock:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('https://localhost:' + (process.env.PORT || 3000), { tls: { rejectUnauthorized: false } }).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\""]
       interval: 30s
       timeout: 5s
       retries: 5
       start_period: 15s
+
+  # Stand-in for the SAPOS NTRIP caster until real credentials exist.
+  # Accepts any login/mountpoint and streams dummy RTCM3 frames (message
+  # type 4073, proprietary range - receivers discard them, so zero real
+  # correction is applied). Remove this service and set NTRIP_HOST etc.
+  # once real credentials are available.
+  ntrip-mock:
+    build:
+      context: .
+      dockerfile: mock-caster/Dockerfile
+    restart: unless-stopped
+    environment:
+      RTCM_INTERVAL_MS: ${RTCM_INTERVAL_MS:-1000}
 
   postgres:
     image: postgis/postgis:16-3.5-alpine
