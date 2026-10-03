@@ -182,9 +182,40 @@ bun start   # production server
 
 ### Configuration
 
-- **NTRIP credentials:** edit `src/config.ts` — the committed
-  `username`/`password` are placeholders; you need a valid SAPOS (or other
-  caster) account and mountpoint.
+- **NTRIP credentials:** set `NTRIP_HOST` / `NTRIP_PORT` / `NTRIP_MOUNTPOINT` /
+  `NTRIP_USERNAME` / `NTRIP_PASSWORD` (env or `.env`, see `src/config.ts`) —
+  you need a valid SAPOS (or other caster) account and mountpoint.
+
+#### SAPOS providers by Bundesland
+
+Registration is per-Bundesland via that state's operator; the caster host goes
+in `NTRIP_HOST` (all on port `2101`). There is also a nationwide caster run by
+the Zentrale Stelle SAPOS. Source:
+[zentrale-stelle-sapos.de/technik-faq](https://zentrale-stelle-sapos.de/technik-faq/)
+
+| Bundesland | Operator | NTRIP caster (`:2101`) | Registration / webserver |
+|---|---|---|---|
+| Nationwide (ZSS) | Zentrale Stelle SAPOS | `sapos-ntrip.de` | [zentrale-stelle-sapos.de](https://zentrale-stelle-sapos.de/) |
+| Baden-Württemberg | LGL | `www.sapos-bw-ntrip.de` | [sapos-bw.de](https://www.sapos-bw.de/) |
+| Bayern | LDBV | `sapos-by-ntrip.de` | [sapos.bayern.de](https://sapos.bayern.de/) |
+| Berlin | SenSW | `sapos-be-ntrip.de` | [sapos-be-gpps.de](https://sapos-be-gpps.de/) |
+| Brandenburg | LGB | `sapos-bb-ntrip.de` | [gpps.sapos-bb.de](https://gpps.sapos-bb.de/) |
+| Hamburg | LGV (GeoNord) | `sapos.geonord.de` | [sapos.geonord.de](https://sapos.geonord.de/) |
+| Hessen | HVBG | `sapos-he-ntrip.de` | [sapos.hvbg.hessen.de](https://sapos.hvbg.hessen.de/) |
+| Mecklenburg-Vorpommern | LAIV-MV | `sapos-mv-ntrip.de` | [sapos-mv-gpps.gnssonline.eu](https://sapos-mv-gpps.gnssonline.eu/) |
+| Niedersachsen + Bremen | LGLN | `openservice-sapos.niedersachsen.de` (or `sapos-ni-ntrip.de`) | [kundenportal.openservice-sapos.niedersachsen.de](http://kundenportal.openservice-sapos.niedersachsen.de/) |
+| Nordrhein-Westfalen | Geobasis.NRW | `sapos-nw-ntrip.de` | [gppspro.saposnrw.de](https://gppspro.saposnrw.de/) |
+| Rheinland-Pfalz | LVermGeo RLP | `sapos-ntrip.rlp.de` | [sapos-rinex.rlp.de](https://sapos-rinex.rlp.de/) |
+| Saarland | LVGL | `sapos-sl-ntrip.de` | [shop.lvgl.saarland.de](https://shop.lvgl.saarland.de/) |
+| Sachsen | GeoSN | `ntrip.sachsen.de` | [landesvermessung.sachsen.de/sapos](http://www.landesvermessung.sachsen.de/sapos/) |
+| Sachsen-Anhalt | LVermGeo ST | `sapos-lsa-ntrip.de` (`4g.`-prefixed host for 3G/4G) | [sapos-ssrp.sachsen-anhalt.de](http://sapos-ssrp.sachsen-anhalt.de/) |
+| Schleswig-Holstein | LVermGeo SH (GeoNord) | `sapos.geonord.de` | [sapos.geonord.de](https://sapos.geonord.de/) |
+| Thüringen | TLBG | `sapos-th-ntrip.de` | [sapos.thueringen.de](https://sapos.thueringen.de/) |
+
+Notes: Hamburg and Schleswig-Holstein share the GeoNord caster/webshop;
+Bremen is covered by the Niedersachsen service; the ZSS caster
+(`sapos-ntrip.de`) serves all of Germany with a single account.
+
 - **TLS:** replace `cert.pem`/`key.pem` with your own cert if the browser
   rejects the self-signed one (you'll need to accept the warning once).
 - **ESP32 firmware:** see `esp32/README.md` — build/flash with PlatformIO.
