@@ -68,8 +68,11 @@ converts them to WKT and inserts them into PostGIS tables (`survey_points`,
 │   ├── config.ts                 # NTRIP caster + Postgres connection config
 │   ├── server/
 │   │   ├── ws.ts                 # WebSocket handler: NTRIP client → RTCM → browser
+│   │   ├── http.ts               # Request routing: /ws upgrade, 404 fallback
+│   │   ├── logger.ts             # pino logging (pretty in dev, JSON in prod)
 │   │   ├── BufferCoalescer.ts    # Batches small RTCM chunks before sending
-│   │   └── uploadHandler.ts      # POST /upload → PostGIS inserts (WKT, SRID 4258)
+│   │   ├── uploadHandler.ts      # POST /upload → PostGIS inserts (WKT, SRID 4258)
+│   │   └── *.test.ts             # bun test suites + NTRIP integration tests
 │   └── frontend/
 │       ├── App.tsx               # Main UI: status bar, position, staging, upload
 │       └── lib/
@@ -83,9 +86,17 @@ converts them to WKT and inserts them into PostGIS tables (`survey_points`,
 ├── esp32/
 │   ├── src/ble_bridge_gnss.cpp   # ESP32 firmware: GNSS UART ↔ BLE NUS bridge
 │   └── platformio.ini            # PlatformIO config (denky32 / generic ESP32)
+├── mock-caster/                  # Stand-in NTRIP caster (container, dummy RTCM)
+│   ├── caster.ts                 #   Handshake, RTCM3 framing, GGA capture
+│   ├── serve.ts                  #   Container entrypoint
+│   └── Dockerfile
 ├── docs/
+│   ├── UI.md                     # Web UI guide: status pills, colors, upload flow
+│   ├── screenshots/              # UI screenshots (regenerate via scripts/)
 │   ├── create_tables.sql         # PostGIS schema (auto-loaded by devcontainer)
 │   └── PROJECT_DOCUMENTATION.md
+├── scripts/screenshots.ts        # Playwright UI screenshot generator
+├── Dockerfile / compose.yaml     # App + PostGIS + ntrip-mock stack
 ├── .devcontainer/                # App + PostGIS dev environment (docker-compose)
 └── cert.pem / key.pem            # Self-signed TLS cert (required for Web Bluetooth)
 ```
@@ -106,8 +117,9 @@ advertising as **"GPS RTK Stick"** using the Nordic UART Service (NUS).
 ### Bun server (`src/`)
 
 - Serves the React SPA at `/` with HMR in development.
-- Upgrades requests to WebSocket and runs `NTRIPWebSocketHandler`: on the first
-  position message it opens one NTRIP connection and streams corrections back.
+- Upgrades `GET /ws` requests to WebSocket and runs `NTRIPWebSocketHandler`: on
+  the first position message it opens a per-connection NTRIP session and
+  streams corrections back (structured logging via pino).
 - `POST /upload` writes geometries to Postgres via `bun:sql`.
 - TLS is enabled via `cert.pem`/`key.pem` — Web Bluetooth requires a secure
   context, so the app is served over HTTPS even locally.
@@ -117,17 +129,33 @@ advertising as **"GPS RTK Stick"** using the Nordic UART Service (NUS).
 React 19 + Mantine + Jotai. Connects to the ESP32 via Web Bluetooth, shows live
 position/fix quality (GPS, DGPS, RTK Float, RTK Fixed), lets the user stage the
 current or a manual position, shows haversine distance to the staged point, and
-uploads named point/line/polygon features to PostGIS.
+uploads named point/line/polygon features to PostGIS. See
+[docs/UI.md](docs/UI.md) for a guide to the status pills, colors and upload flow
+(with screenshots).
 
 ### Database
 
-PostGIS 16 (via devcontainer docker-compose). Schema lives in
+PostGIS 16 (via `compose.yaml` or the devcontainer — both mount the schema on
+first start). Schema lives in
 `docs/create_tables.sql` — three `survey_*` tables with `geometry(*, 4258)`
 columns, timestamps, names and a `tags` jsonb column.
 
 ## Getting started
 
-### Dev container (recommended)
+### Docker compose (run the whole stack)
+
+```bash
+docker compose up -d --build
+```
+
+Starts three services: the app (HTTPS on `:3000`, override with `APP_PORT`),
+PostGIS with the schema auto-initialized, and `ntrip-mock` — a stand-in NTRIP
+caster that accepts any credentials and streams dummy RTCM frames, so the whole
+pipeline can be tested before real SAPOS credentials exist. Point the app at a
+real caster via `NTRIP_HOST` / `NTRIP_MOUNTPOINT` / `NTRIP_USERNAME` /
+`NTRIP_PASSWORD` (env or `.env`).
+
+### Dev container (recommended for development)
 
 The `.devcontainer` setup provides Bun plus a PostGIS database with the schema
 auto-initialized and ports `3000`/`5432` forwarded. Open the repo in VS Code →
@@ -164,7 +192,9 @@ bun start   # production server
 ### Usage
 
 1. Start the server, open the HTTPS URL, accept the certificate warning.
-2. Click **Connect BLE** and pair with *GPS RTK Stick*.
+2. Click **Connect BLE** and pick *GPS RTK Stick* in the browser's device
+   picker. Do **not** pair it in the OS Bluetooth menu — a stale system
+   connection stops the stick advertising and blocks the web app.
 3. Once a GGA fix arrives, the app sends the position to the server, which
    starts the NTRIP stream — watch the fix quality progress to **RTK Fixed**.
 4. Use **Stage Position** (or Manual Position) to capture points, then
