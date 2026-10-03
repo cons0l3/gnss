@@ -1,3 +1,7 @@
+import { logger } from "./logger";
+
+const log = logger.child({ module: "coalescer" });
+
 export type SendCallback = (data: Buffer) => void;
 
 export type BufferCoalescerOptions = {
@@ -63,6 +67,7 @@ export class BufferCoalescer {
     if (this.buffers.length === 0) return;
 
     const combined = Buffer.concat(this.buffers);
+    log.trace({ buffers: this.buffers.length, bytes: combined.length }, "flushing batch");
     this.onFlush(combined);
 
     // Reset state

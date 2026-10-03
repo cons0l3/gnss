@@ -2,6 +2,10 @@ import type { WebSocketHandler } from "bun";
 import { BufferCoalescer } from "./BufferCoalescer";
 import { Buffer } from "buffer";
 import { NTRIPConfig } from "../config";
+import { logger } from "./logger";
+
+const wsLog = logger.child({ module: "ws" });
+const ntripLog = logger.child({ module: "ntrip" });
 
 export interface NtripClientLike {
     run(): void;
@@ -35,6 +39,7 @@ const defaultFactory: NtripClientFactory = (options) => new NtripClient(options)
 type ConnectionState = {
     coalescer: BufferCoalescer;
     ntripClient: NtripClientLike | null;
+    streamReady: boolean;
 };
 
 export class NTRIPWebSocketHandler implements WebSocketHandler<string> {
@@ -46,13 +51,13 @@ export class NTRIPWebSocketHandler implements WebSocketHandler<string> {
     ) { }
 
     open = (ws: Bun.ServerWebSocket<string>): void => {
-        console.log("server ws: open");
+        wsLog.info({ client: ws.remoteAddress }, "client connected");
         const coalescer = new BufferCoalescer((data) => {
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(data.toBase64());
             }
         });
-        this.connections.set(ws, { coalescer, ntripClient: null });
+        this.connections.set(ws, { coalescer, ntripClient: null, streamReady: false });
     }
 
     close = (
@@ -60,14 +65,14 @@ export class NTRIPWebSocketHandler implements WebSocketHandler<string> {
         code: number,
         reason: string,
     ): void => {
-        console.log("WebSocket closed");
         const state = this.connections.get(ws);
         this.connections.delete(ws);
         if (!state) return;
 
+        wsLog.info({ client: ws.remoteAddress, code, reason }, "client disconnected");
         state.coalescer.dispose();
         if (state.ntripClient) {
-            console.log("Closing NTRIP client");
+            ntripLog.info("closing caster connection");
             state.ntripClient.close();
         }
     }
@@ -85,7 +90,7 @@ export class NTRIPWebSocketHandler implements WebSocketHandler<string> {
         try {
             position = JSON.parse(raw);
         } catch {
-            console.warn("server ws: ignoring malformed message: " + raw);
+            wsLog.warn({ raw: raw.slice(0, 200) }, "ignoring malformed message");
             return;
         }
 
@@ -95,14 +100,14 @@ export class NTRIPWebSocketHandler implements WebSocketHandler<string> {
             !Number.isFinite(lat) || !Number.isFinite(lon) ||
             Math.abs(lat) > 90 || Math.abs(lon) > 180
         ) {
-            console.warn("server ws: ignoring invalid position", position);
+            wsLog.warn({ position }, "ignoring invalid position");
             return;
         }
 
         const xyz = llhToEcef(lat, lon);
 
         if (!state.ntripClient) {
-            console.log("Retrieved initial position: lat: " + lat + ", lon: " + lon + ", xyz: " + xyz);
+            ntripLog.info({ lat, lon }, "received initial position, connecting to caster");
 
             state.ntripClient = this.createClient({
                 interval: 2000,
@@ -116,22 +121,26 @@ export class NTRIPWebSocketHandler implements WebSocketHandler<string> {
             client.on("data", (data: Uint8Array) => {
                 // the client also emits the caster's "ICY 200 OK" header as
                 // data; only forward real RTCM frames (0xd3 preamble) to BLE
-                if (data[0] === 0xd3) {
-                    state.coalescer.add(Buffer.from(data));
+                if (data[0] !== 0xd3) return;
+
+                if (!state.streamReady) {
+                    state.streamReady = true;
+                    ntripLog.info("correction stream established");
                 }
+                state.coalescer.add(Buffer.from(data));
             });
 
             client.on("close", () => {
-                console.log("ntrip: client close");
+                ntripLog.info("caster connection closed");
             });
 
             client.on("error", (err: unknown) => {
-                console.log("ntrip: error: " + err);
+                ntripLog.error({ err }, "caster connection error");
             });
 
             client.run();
         } else {
-            console.log("Updating NTRIP client position");
+            ntripLog.info({ lat, lon }, "updating caster position");
             state.ntripClient.setXYZ(xyz);
         }
     }

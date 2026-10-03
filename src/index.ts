@@ -3,6 +3,7 @@ import frontend from "./frontend/index.html";
 import { NTRIPWebSocketHandler } from "./server/ws";
 import { uploadHandler } from "./server/uploadHandler";
 import { handleFetch } from "./server/http";
+import { logger } from "./server/logger";
 
 const server = serve({
   routes: {
@@ -27,4 +28,4 @@ const server = serve({
   }
 });
 
-console.log(`🚀 Server running at ${server.url}`);
+logger.info({ url: server.url.toString() }, "server started");

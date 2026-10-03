@@ -1,5 +1,8 @@
 import { SQL } from "bun";
 import { PostgresConnectionString } from "../config";
+import { logger } from "./logger";
+
+const log = logger.child({ module: "upload" });
 
 export type UploadPayload = {
     name: string,
@@ -73,13 +76,18 @@ export async function handleUpload(req: Request, conn: SQL): Promise<Response> {
     try {
         payload = await req.json();
     } catch {
+        log.warn("rejected upload: malformed JSON body");
         return new Response("Invalid JSON body", { status: 400 });
     }
 
     const validationError = validatePayload(payload);
     if (validationError) {
+        log.warn({ reason: validationError }, "rejected upload");
         return new Response(validationError, { status: 400 });
     }
+
+    const count = payload.positions.length;
+    log.info({ name: payload.name, type: payload.type, count }, "storing survey upload");
 
     try {
         switch (payload.type) {
@@ -94,10 +102,11 @@ export async function handleUpload(req: Request, conn: SQL): Promise<Response> {
                 break;
         }
     } catch (err) {
-        console.error("Failed to store upload:", err);
+        log.error({ err, name: payload.name, type: payload.type }, "failed to store upload");
         return new Response("Failed to store upload", { status: 502 });
     }
 
+    log.info({ name: payload.name, type: payload.type, count }, "survey upload stored");
     return new Response("OK", { status: 201 });
 }
 
@@ -106,6 +115,7 @@ export async function uploadPolygon(payload: UploadPayload, conn: SQL) {
     const firstPosition = payload.positions[0]!;
     const polygonString = [...payload.positions, firstPosition].map(pos => `${pos.longitude} ${pos.latitude}`).join(", ");
     const geomString = `POLYGON((${polygonString}))`;
+    log.debug({ geom: geomString }, "insert polygon");
 
     await conn`INSERT INTO survey_polygons (name, geom) VALUES (${payload.name}, ST_GeomFromText(${geomString}, 4258));`
 }
@@ -114,6 +124,7 @@ export async function uploadPoints(payload: UploadPayload, conn: SQL) {
     await conn.begin(async (tx) => {
         for (const pos of payload.positions) {
             const geomString = `POINT(${pos.longitude} ${pos.latitude})`;
+            log.debug({ geom: geomString }, "insert point");
             await tx`INSERT INTO survey_points (name, geom) VALUES (${payload.name}, ST_GeomFromText(${geomString}, 4258));`
         }
     });
@@ -122,6 +133,7 @@ export async function uploadPoints(payload: UploadPayload, conn: SQL) {
 export async function uploadLine(payload: UploadPayload, conn: SQL) {
     const lineString = payload.positions.map(pos => `${pos.longitude} ${pos.latitude}`).join(", ");
     const geomString = `LINESTRING(${lineString})`;
+    log.debug({ geom: geomString }, "insert line");
 
     await conn`INSERT INTO survey_lines (name, geom) VALUES (${payload.name}, ST_GeomFromText(${geomString}, 4258));`
 }
