@@ -1,0 +1,23 @@
+{
+  "commands": [
+    {"command":"parameters.add","params":{"name":"plate_length","expression":"90 mm"}},
+    {"command":"parameters.add","params":{"name":"plate_width","expression":"50 mm"}},
+    {"command":"parameters.add","params":{"name":"plate_thickness","expression":"8 mm"}},
+    {"command":"parameters.add","params":{"name":"fixing_hole_diameter","expression":"8 mm"}},
+    {"command":"parameters.add","params":{"name":"saddle_length","expression":"20 mm"}},
+    {"command":"parameters.add","params":{"name":"saddle_width","expression":"20 mm"}},
+    {"command":"parameters.add","params":{"name":"saddle_height","expression":"7 mm"}},
+    {"command":"parameters.add","params":{"name":"saddle_center_offset","expression":"plate_length/2-saddle_length/2"}},
+    {"command":"parameters.add","params":{"name":"trough_radius","expression":"14 mm"}},
+    {"command":"parameters.add","params":{"name":"trough_web_thickness","expression":"4 mm"}},
+    {"command":"parameters.add","params":{"name":"relief_width","expression":"6 mm"}},
+    {"command":"parameters.add","params":{"name":"relief_height","expression":"3 mm"}},
+    {"command":"solid.box","params":{"name":"Battery Mount","body_name":"Battery Mount","length":"plate_length","width":"plate_width","height":"plate_thickness","center":["0","0","plate_thickness/2"],"operation":"new"}},
+    {"command":"solid.cylinder","params":{"name":"Central Through Hole","diameter":"fixing_hole_diameter","height":"plate_thickness","base":["0","0","0"],"operation":"cut","targets":["Battery Mount"]}},
+    {"command":"solid.box","params":{"name":"Left Saddle","length":"saddle_length","width":"saddle_width","height":"saddle_height","center":["-saddle_center_offset","0","plate_thickness+saddle_height/2"],"operation":"join","targets":["Battery Mount"]}},
+    {"command":"solid.box","params":{"name":"Right Saddle","length":"saddle_length","width":"saddle_width","height":"saddle_height","center":["saddle_center_offset","0","plate_thickness+saddle_height/2"],"operation":"join","targets":["Battery Mount"]}},
+    {"command":"solid.cylinder","params":{"name":"Cylindrical Saddle Troughs","radius":"trough_radius","height":"plate_length","base":["-plate_length/2","0","plate_thickness+trough_web_thickness+trough_radius"],"axis":"X","operation":"cut","targets":["Battery Mount"]}},
+    {"command":"solid.box","params":{"name":"Left Under Saddle Relief","length":"relief_width","width":"saddle_width","height":"relief_height","center":["-saddle_center_offset","0","plate_thickness+relief_height/2"],"operation":"cut","targets":["Battery Mount"]}},
+    {"command":"solid.box","params":{"name":"Right Under Saddle Relief","length":"relief_width","width":"saddle_width","height":"relief_height","center":["saddle_center_offset","0","plate_thickness+relief_height/2"],"operation":"cut","targets":["Battery Mount"]}}
+  ]
+}
